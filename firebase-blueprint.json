@@ -1,0 +1,223 @@
+{
+  "entities": {
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Inbound communication or interview inquiry submitted to Kamal Ojha",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Full name of the recruiter or sender"
+        },
+        "email": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 150,
+          "description": "Email address of the sender"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "Subject of the inquiry"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000,
+          "description": "Message body"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["unread", "reviewed", "archived"],
+          "description": "Review status of the inquiry"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of submission"
+        }
+      },
+      "required": ["name", "email", "subject", "message", "status", "createdAt"]
+    },
+    "Endorsement": {
+      "title": "Endorsement",
+      "description": "Professional recommendation or guestbook testimonial for Kamal Ojha",
+      "type": "object",
+      "properties": {
+        "authorUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the endorsed author"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Display name of the author"
+        },
+        "authorEmail": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 150,
+          "description": "Email address of the author"
+        },
+        "authorPhoto": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Profile avatar URL"
+        },
+        "authorRole": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Job title or academic role of author"
+        },
+        "organization": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Company or university of author"
+        },
+        "relationship": {
+          "type": "string",
+          "enum": ["Recruiter", "Peer / Colleague", "Mentor / Professor", "Collaborator", "Visitor"],
+          "description": "Professional relationship context"
+        },
+        "content": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 1000,
+          "description": "Testimonial or recommendation text"
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Star rating out of 5"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["authorUid", "authorName", "authorEmail", "authorRole", "organization", "relationship", "content", "rating", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator record for authorized management",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email address"
+        },
+        "role": {
+          "type": "string",
+          "description": "Admin role identifier"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Transaction record for consultations, mentorship, or project deposits processed via Razorpay or Paytm",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Internal or gateway order identifier"
+        },
+        "gateway": {
+          "type": "string",
+          "enum": ["razorpay", "paytm"],
+          "description": "Payment gateway provider"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount in INR"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["INR"],
+          "description": "Transaction currency code"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Customer or recruiter name"
+        },
+        "customerEmail": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 150,
+          "description": "Customer email"
+        },
+        "customerPhone": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Optional contact mobile number"
+        },
+        "bank": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Settlement or NetBanking bank name (e.g., State Bank of India (SBIN))"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Payment channel used (e.g. NetBanking, UPI, Card)"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Consultation service or purpose"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["completed", "pending", "failed", "flagged"],
+          "description": "Payment status"
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "Gateway transaction reference ID"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of payment"
+        }
+      },
+      "required": ["orderId", "gateway", "amount", "currency", "customerName", "customerEmail", "purpose", "status", "transactionId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/inquiries/{inquiryId}": {
+      "schema": {
+        "$ref": "#/entities/Inquiry"
+      },
+      "description": "Contact inquiries sent to Kamal Ojha"
+    },
+    "/endorsements/{endorsementId}": {
+      "schema": {
+        "$ref": "#/entities/Endorsement"
+      },
+      "description": "Professional recommendations and guestbook endorsements"
+    },
+    "/admins/{adminUid}": {
+      "schema": {
+        "$ref": "#/entities/Admin"
+      },
+      "description": "Authorized administrators"
+    },
+    "/payments/{paymentId}": {
+      "schema": {
+        "$ref": "#/entities/Payment"
+      },
+      "description": "Razorpay and Paytm transaction records"
+    }
+  }
+}

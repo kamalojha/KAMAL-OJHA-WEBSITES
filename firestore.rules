@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'kamal19ojha@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Inquiries validation helper
+    function isValidInquiry(data) {
+      return data.keys().hasAll(['name', 'email', 'subject', 'message', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['name', 'email', 'subject', 'message', 'status', 'createdAt']) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 150 &&
+        data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 200 &&
+        data.message is string && data.message.size() >= 10 && data.message.size() <= 2000 &&
+        data.status in ['unread', 'reviewed', 'archived'];
+    }
+
+    // Endorsement validation helper
+    function isValidEndorsement(data) {
+      return data.keys().hasAll(['authorUid', 'authorName', 'authorEmail', 'authorRole', 'organization', 'relationship', 'content', 'rating', 'createdAt']) &&
+        data.keys().hasOnly(['authorUid', 'authorName', 'authorEmail', 'authorPhoto', 'authorRole', 'organization', 'relationship', 'content', 'rating', 'createdAt']) &&
+        data.authorUid == request.auth.uid &&
+        data.authorEmail == request.auth.token.email &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.authorRole is string && data.authorRole.size() >= 2 && data.authorRole.size() <= 120 &&
+        data.organization is string && data.organization.size() >= 2 && data.organization.size() <= 120 &&
+        data.relationship in ['Recruiter', 'Peer / Colleague', 'Mentor / Professor', 'Collaborator', 'Visitor'] &&
+        data.content is string && data.content.size() >= 10 && data.content.size() <= 1000 &&
+        data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+        (!('authorPhoto' in data) || (data.authorPhoto is string && data.authorPhoto.size() <= 500));
+    }
+
+    // Payment validation helper
+    function isValidPayment(data) {
+      return data.keys().hasAll(['orderId', 'gateway', 'amount', 'currency', 'customerName', 'customerEmail', 'purpose', 'status', 'transactionId', 'createdAt']) &&
+        data.keys().hasOnly(['orderId', 'gateway', 'amount', 'currency', 'customerName', 'customerEmail', 'customerPhone', 'bank', 'paymentMethod', 'purpose', 'status', 'transactionId', 'createdAt']) &&
+        data.orderId is string && data.orderId.size() >= 1 && data.orderId.size() <= 100 &&
+        data.gateway in ['razorpay', 'paytm'] &&
+        (data.amount is number || data.amount is int || data.amount is float) && data.amount > 0 && data.amount <= 1000000 &&
+        data.currency == 'INR' &&
+        data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+        data.customerEmail is string && data.customerEmail.size() >= 3 && data.customerEmail.size() <= 150 &&
+        data.purpose is string && data.purpose.size() >= 1 && data.purpose.size() <= 200 &&
+        data.status in ['completed', 'pending', 'failed', 'flagged'] &&
+        data.transactionId is string && data.transactionId.size() >= 1 && data.transactionId.size() <= 128 &&
+        (!('bank' in data) || (data.bank is string && data.bank.size() <= 200)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 120)) &&
+        (!('customerPhone' in data) || (data.customerPhone is string && data.customerPhone.size() <= 50));
+    }
+
+    // Inquiries Collection (Inbound Contact Messages)
+    match /inquiries/{inquiryId} {
+      // Anyone can submit an inquiry; createdAt must match server timestamp
+      allow create: if isValidId(inquiryId) &&
+        isValidInquiry(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().status == 'unread';
+
+      // PII Protection: Only the admin (Kamal) can read/list contact inquiries
+      allow get, list: if isAdmin();
+
+      // Only admin can update the inquiry status
+      allow update: if isAdmin() &&
+        isValidId(inquiryId) &&
+        isValidInquiry(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+
+      // Only admin can delete inquiries
+      allow delete: if isAdmin();
+    }
+
+    // Endorsements & Recommendations Collection (Public Social Proof)
+    match /endorsements/{endorsementId} {
+      // Public can read verified endorsements on the portfolio
+      allow get, list: if true;
+
+      // Authenticated users can post recommendations
+      allow create: if isVerifiedUser() &&
+        isValidId(endorsementId) &&
+        isValidEndorsement(incoming()) &&
+        incoming().createdAt == request.time;
+
+      // Authors can update their own content
+      allow update: if isVerifiedUser() &&
+        isValidId(endorsementId) &&
+        isValidEndorsement(incoming()) &&
+        incoming().authorUid == request.auth.uid &&
+        existing().authorUid == request.auth.uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['authorRole', 'organization', 'relationship', 'content', 'rating', 'authorPhoto']);
+
+      // Authors or Admin can delete
+      allow delete: if isSignedIn() && (existing().authorUid == request.auth.uid || isAdmin());
+    }
+
+    // Admin Collection
+    match /admins/{adminUid} {
+      allow read, write: if isAdmin();
+    }
+
+    // Payments Collection (Razorpay & Paytm)
+    match /payments/{paymentId} {
+      allow create: if isValidId(paymentId) &&
+        isValidPayment(incoming()) &&
+        (incoming().createdAt == request.time || incoming().createdAt is timestamp);
+
+      // Allow individual receipt lookup by transaction author, admin, or direct receipt verification
+      allow get: if true;
+
+      // List queries strictly reserved for Admin to prevent customer PII leakage
+      allow list: if isAdmin();
+
+      // Only admin can update or delete records
+      allow update, delete: if isAdmin();
+    }
+  }
+}

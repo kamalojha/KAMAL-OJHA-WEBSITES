@@ -1,0 +1,10 @@
+{
+  "name": "Remix POTFOLIO WEBSITE",
+  "description": "",
+  "requestFramePermissions": [
+    "CAMERA_AND_MICROPHONE"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
