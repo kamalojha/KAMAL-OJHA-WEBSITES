@@ -117,6 +117,7 @@ export function App() {
         <ProjectDeepDiveModal
           project={selectedProject}
           onClose={() => setSelectedProject(null)}
+          onOpenPayment={handleOpenPayment}
         />
 
         {/* Full Resume Dossier Sheet Modal */}

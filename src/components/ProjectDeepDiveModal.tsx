@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ExternalLink, Code2, Layers, CheckCircle2, Copy, Check } from 'lucide-react';
+import { X, ExternalLink, Code2, Layers, CheckCircle2, Copy, Check, CreditCard } from 'lucide-react';
 import { Project } from '../types/portfolio';
 import { XRaySimulator } from './simulators/XRaySimulator';
 import { WheatDiseaseSimulator } from './simulators/WheatDiseaseSimulator';
@@ -9,9 +9,10 @@ import { NetworkBalanceSimulator } from './simulators/NetworkBalanceSimulator';
 interface Props {
   project: Project | null;
   onClose: () => void;
+  onOpenPayment?: (packageId?: string, amount?: number) => void;
 }
 
-export const ProjectDeepDiveModal: React.FC<Props> = ({ project, onClose }) => {
+export const ProjectDeepDiveModal: React.FC<Props> = ({ project, onClose, onOpenPayment }) => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'architecture' | 'simulator' | 'code'>('simulator');
 
@@ -246,16 +247,31 @@ export const ProjectDeepDiveModal: React.FC<Props> = ({ project, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-800/80 flex items-center justify-between bg-slate-900/60">
+        <div className="p-4 sm:p-5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
           <span className="text-xs text-slate-400">
             Author: <strong className="text-slate-200">Kamal Ojha</strong> · B.E. Computer Science Engineering
           </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            Close Deep Dive
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenPayment && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenPayment('architecture-audit', 1499);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:text-white bg-emerald-950/50 hover:bg-emerald-900/70 border border-emerald-500/40 rounded-lg transition-colors flex items-center gap-1.5"
+                title="Book code review / architecture consultation"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Book Architecture Review (₹1,499)</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              Close Deep Dive
+            </button>
+          </div>
         </div>
       </div>
     </div>
